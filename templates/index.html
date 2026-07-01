@@ -1,0 +1,1386 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Реестр отгрузок</title>
+    <style>
+        * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background: #f4f6f9; padding: 20px; }
+        .container { max-width: 1400px; margin: 0 auto; background: white; padding: 25px; border-radius: 16px; box-shadow: 0 8px 24px rgba(0,0,0,0.08); }
+        h1 { margin-top: 0; color: #1a2b4a; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; }
+        
+        #statusMsg.success { color: #155724; }
+        #statusMsg.error { color: #721c24; }
+        #statusMsg.info { color: #0c5460; }
+        
+        .user-info { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+        .user-info .role-badge { padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+        .role-badge.admin { background: #d4edda; color: #155724; }
+        .role-badge.editor { background: #cce5ff; color: #004085; }
+        .role-badge.user { background: #fff3cd; color: #856404; }
+        .user-info .logout-btn { padding: 4px 16px; background: #dc3545; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; text-decoration: none; }
+        .user-info .logout-btn:hover { background: #c82333; }
+        .btn-change-password { padding: 4px 16px; background: #ffc107; color: #1a2b4a; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600; }
+        .btn-change-password:hover { background: #e0a800; }
+        
+        .toolbar-top { display: flex; flex-wrap: wrap; gap: 16px; align-items: center; margin-bottom: 15px; padding: 16px; background: #f0f3fa; border-radius: 12px; }
+        .toolbar-top label { font-weight: 600; color: #1e2f4e; }
+        .toolbar-top input[type="date"] { padding: 8px 12px; border-radius: 8px; border: 1px solid #ccd4e0; font-size: 15px; background: white; }
+        .toolbar-top input[type="date"]:disabled { background: #e9ecef; cursor: not-allowed; }
+        
+        .toolbar-bottom { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-bottom: 15px; padding: 12px 16px; background: #f8f9fa; border-radius: 12px; border: 1px solid #e2e7f0; }
+        .toolbar-bottom .btn { padding: 7px 18px; font-size: 14px; }
+        
+        .toolbar-quick { display: flex; flex-wrap: wrap; gap: 16px; align-items: center; margin-bottom: 20px; padding: 16px 24px; background: linear-gradient(135deg, #e8f0fe 0%, #dce6f5 100%); border-radius: 12px; border: 2px solid #1a2b4a; box-shadow: 0 2px 8px rgba(26,43,74,0.1); }
+        .toolbar-quick .btn-primary { background: #1a2b4a; color: white; border: none; }
+        .toolbar-quick .btn-primary:hover { background: #2c4270; transform: scale(1.02); }
+        .toolbar-quick span { color: #1a2b4a; }
+        
+        .btn { padding: 9px 22px; border: none; border-radius: 8px; font-weight: 600; font-size: 15px; cursor: pointer; transition: 0.2s; background: white; color: #1a2b4a; border: 1px solid #ccd4e0; }
+        .btn-primary { background: #1a2b4a; color: white; border: none; }
+        .btn-primary:hover { background: #2c4270; }
+        .btn-success { background: #1e7e34; color: white; border: none; }
+        .btn-success:hover { background: #2a9d45; }
+        .btn-danger { background: #b02a37; color: white; border: none; }
+        .btn-danger:hover { background: #d43b4a; }
+        .btn-warning { background: #d39e00; color: white; border: none; }
+        .btn-warning:hover { background: #b88900; }
+        .btn-secondary { background: #6c757d; color: white; border: none; }
+        .btn-secondary:hover { background: #5a6268; }
+        .btn-cyan { background: #17a2b8; color: white; border: none; }
+        .btn-cyan:hover { background: #138496; }
+        .btn-danger-disabled { background: #e9ecef; color: #6c757d; border: 1px solid #dee2e6; cursor: not-allowed; }
+        
+        table { width: 100%; border-collapse: collapse; font-size: 14px; }
+        th { background: #e7ebf4; color: #1a2b4a; padding: 12px 8px; text-align: left; border-bottom: 2px solid #c8d1e0; white-space: nowrap; }
+        td { padding: 9px 8px; border-bottom: 1px solid #e2e7f0; vertical-align: middle; }
+        td input, td select { width: 100%; padding: 6px 8px; border-radius: 6px; border: 1px solid #d6deec; font-size: 13px; background: white; }
+        td input:focus, td select:focus { outline: 2px solid #6f8fcb; border-color: transparent; }
+        td input[list] { background: white; }
+        td select { width: 100%; }
+        td input[readonly] { background: #f8f9fa; cursor: not-allowed; }
+        td input.date-display { background: #f8f9fa; cursor: default; text-align: center; font-weight: 500; border: none; }
+        td input.disabled-field { background: #f8f9fa; cursor: not-allowed; }
+        .row-actions { display: flex; gap: 6px; }
+        .row-actions .btn { padding: 4px 10px; font-size: 13px; }
+        .summary { margin-top: 30px; padding: 20px; background: #f0f4fe; border-radius: 12px; border-left: 5px solid #1a2b4a; }
+        .summary h3 { margin-top: 0; color: #1a2b4a; }
+        .summary-grid { display: flex; flex-wrap: wrap; gap: 20px 40px; }
+        .summary-item { background: white; padding: 8px 20px 12px 20px; border-radius: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.04); min-width: 140px; }
+        .summary-item .label { font-size: 13px; color: #5a6f8a; }
+        .summary-item .value { font-size: 26px; font-weight: 700; color: #0b1c33; }
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); }
+        .modal-content { background: white; margin: 5% auto; padding: 30px; width: 80%; max-width: 800px; border-radius: 16px; max-height: 80vh; overflow-y: auto; }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .modal-header h2 { margin: 0; }
+        .modal-header .close { font-size: 28px; cursor: pointer; color: #999; }
+        .modal-header .close:hover { color: #333; }
+        .contractor-card { border: 1px solid #dee2e6; border-radius: 10px; padding: 15px; margin-bottom: 15px; background: #fafbfc; }
+        .contractor-card .contractor-name { font-weight: 700; font-size: 16px; margin-bottom: 8px; }
+        .contractor-card .address-list { padding-left: 20px; margin: 8px 0; }
+        .contractor-card .address-list li { margin-bottom: 4px; }
+        .contractor-card .address-actions { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+        .contractor-card .address-actions .btn { padding: 3px 12px; font-size: 12px; }
+        .contractor-card .btn { padding: 3px 12px; font-size: 12px; }
+        .add-contractor-row { display: flex; gap: 10px; margin: 15px 0; flex-wrap: wrap; }
+        .add-contractor-row input { flex: 1; padding: 8px 12px; border-radius: 8px; border: 1px solid #ccd4e0; font-size: 14px; min-width: 150px; }
+        .search-input { width: 100%; padding: 10px 14px; border-radius: 8px; border: 1px solid #ccd4e0; font-size: 14px; margin-bottom: 15px; }
+        @media print { body { background: white; padding: 0; } .container { box-shadow: none; padding: 20px; } .toolbar-top, .toolbar-quick, .toolbar-bottom, .row-actions, .btn, .no-print { display: none !important; } .summary { background: #f0f4fe !important; } }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>
+        🚚 Реестр отгрузок
+        <div class="user-info">
+            <span style="font-size: 14px; font-weight: normal; color: #5a6f8a;">
+                👤 {{ user }}
+                <span class="role-badge {{ role }}">{{ role }}</span>
+            </span>
+            <button class="btn-change-password" onclick="openChangePassword()">🔑 Сменить пароль</button>
+            {% if role == 'admin' %}
+            <a href="/users" class="btn btn-cyan" style="text-decoration: none; padding: 4px 16px; font-size: 13px;">👥 Пользователи</a>
+            {% endif %}
+            <a href="/logout" class="logout-btn">Выйти</a>
+        </div>
+    </h1>
+    
+    <div id="statusBar" style="display: flex; align-items: center; justify-content: space-between; padding: 6px 16px; margin-bottom: 12px; background: #f8f9fa; border-radius: 8px; border: 1px solid #e2e7f0; min-height: 42px; flex-wrap: wrap; gap: 8px;">
+        <div id="statusMsg" style="color: #1a2b4a; font-size: 14px; font-weight: 500;">
+            ✅ Готово к работе
+        </div>
+        <div style="display: flex; gap: 15px; align-items: center; font-size: 13px; color: #5a6f8a; flex-wrap: wrap;">
+            {% if role == 'user' %}
+            <span class="restriction-notice" style="font-size: 12px; color: #856404; background: #fff3cd; padding: 4px 12px; border-radius: 4px;">🔒 Только просмотр</span>
+            {% elif role == 'editor' %}
+            <span class="restriction-notice" style="font-size: 12px; color: #004085; background: #cce5ff; padding: 4px 12px; border-radius: 4px;">✏️ Полное редактирование</span>
+            {% endif %}
+            <span>📅 <span id="currentDateDisplay" style="font-weight: 600; color: #1a2b4a;"></span></span>
+            <span>⏱️ <span id="currentTimeDisplay" style="font-weight: 600; color: #1a2b4a;"></span></span>
+        </div>
+    </div>
+
+    <!-- ВЕРХНЯЯ ПАНЕЛЬ: Фильтры и отчёты -->
+    <div class="toolbar-top no-print">
+        <div>
+            <label>📅 Дата отгрузки:</label>
+            <input type="date" id="filterDate" max="">
+        </div>
+        <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+            <label>📆 Период:</label>
+            <input type="date" id="periodStart" style="width: 140px;" max="">
+            <span>—</span>
+            <input type="date" id="periodEnd" style="width: 140px;" max="">
+            <button class="btn btn-success" onclick="viewPeriodReport()">👁️ Просмотр отчёта</button>
+            <button class="btn btn-success" onclick="printPeriodReport()">🖨️ Печать отчёта</button>
+        </div>
+        <div style="margin-left: auto;">
+            <span style="color: #5a6f8a; font-size: 13px;">⚡ Записей за день: <strong id="dayCount">0</strong></span>
+        </div>
+    </div>
+
+    <!-- СРЕДНЯЯ ПАНЕЛЬ: Управление -->
+    <div class="toolbar-bottom no-print">
+        {% if role == 'admin' or role == 'editor' %}
+        <button class="btn btn-success" onclick="saveAll()">💾 Сохранить</button>
+        <button class="btn btn-cyan" onclick="openContractorsEditor()">🏢 Контрагенты</button>
+        <button class="btn btn-warning" onclick="openMarksEditor()">📝 Марки</button>
+        {% endif %}
+        <button class="btn btn-success" onclick="printReport()">🖨️ Печать (день)</button>
+        {% if role == 'admin' or role == 'editor' %}
+        <button class="btn btn-danger" onclick="clearAll()">🗑️ Очистить всё</button>
+        {% endif %}
+        <span style="margin-left: auto; color: #3d5a78; font-size: 14px;">
+            ⚡ Записей всего: <span id="rowCount">0</span>
+        </span>
+    </div>
+
+    <!-- НИЖНЯЯ ПАНЕЛЬ: Быстрое добавление -->
+    <div class="toolbar-quick no-print">
+        <span style="font-weight: 600; color: #1a2b4a; font-size: 16px;">🚀 Быстрое добавление:</span>
+        {% if role == 'admin' or role == 'editor' %}
+        <button class="btn btn-primary" onclick="addRow()" style="font-size: 18px; padding: 12px 40px; background: #1a2b4a; color: white; border: none; border-radius: 10px; box-shadow: 0 4px 12px rgba(26,43,74,0.35);">
+            ➕ Добавить строку
+        </button>
+        {% else %}
+        <button class="btn btn-secondary" style="font-size: 18px; padding: 12px 40px; background: #e9ecef; color: #6c757d; border: 1px solid #dee2e6; cursor: not-allowed;" disabled>
+            ➕ Добавить строку (только просмотр)
+        </button>
+        {% endif %}
+        <div style="display: flex; gap: 20px; align-items: center; flex-wrap: wrap;">
+            <span style="font-size: 15px; color: #1a2b4a;">
+                📦 Объём за день: <strong id="quickTotalVolume" style="font-size: 20px; color: #1a2b4a;">0</strong> м³
+            </span>
+            <span style="font-size: 13px; color: #6c757d;">
+                💡 Новые контрагенты и адреса сохраняются автоматически
+            </span>
+        </div>
+    </div>
+
+    <table id="shipmentTable">
+        <thead>
+            <tr>
+                <th style="width:40px;">#</th>
+                <th style="width:110px;">Дата</th>
+                <th style="width:110px;">Время</th>
+                <th style="min-width:150px;">Контрагент</th>
+                <th style="min-width:160px;">Адрес</th>
+                <th style="width:220px;">Марка</th>
+                <th style="width:90px;">Объём</th>
+                <th style="min-width:130px;">Контактное лицо</th>
+                <th style="width:140px;">Телефон</th>
+                <th style="width:90px;">Отгружено</th>
+                <th style="width:150px;">Оплата</th>
+                <th style="width:100px;" class="no-print">Действия</th>
+            </tr>
+        </thead>
+        <tbody id="tableBody">
+            <!-- Строки загружаются из сервера -->
+        </tbody>
+    </table>
+
+    <div class="summary" id="summaryBlock">
+        <h3>📊 Сводка по маркам за день</h3>
+        <div class="summary-grid" id="summaryGrid">
+            <div style="color:#5a6f8a; padding:8px 0;">Загрузка данных...</div>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно: редактор марок -->
+<div id="marksModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>📝 Редактор марок</h2>
+            <span class="close" onclick="closeMarksEditor()">&times;</span>
+        </div>
+        <p>Список доступных марок. Нажмите ✕ чтобы удалить, или добавьте новую.</p>
+        <input type="text" class="search-input" id="markSearch" placeholder="🔍 Поиск по списку..." oninput="filterMarksList()">
+        <div class="marks-list" id="marksList"></div>
+        <div class="add-contractor-row">
+            <input type="text" id="newMarkInput" placeholder="Введите новую марку..." onkeydown="if(event.key==='Enter') addNewMark()">
+            <button class="btn btn-success" onclick="addNewMark()">➕ Добавить</button>
+        </div>
+        <div style="margin-top: 20px; display: flex; gap: 10px; justify-content: flex-end;">
+            <button class="btn btn-secondary" onclick="closeMarksEditor()">Закрыть</button>
+            <button class="btn btn-primary" onclick="saveMarks()">💾 Сохранить марки</button>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно: редактор контрагентов и адресов -->
+<div id="contractorsModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>🏢 Контрагенты и адреса</h2>
+            <span class="close" onclick="closeContractorsEditor()">&times;</span>
+        </div>
+        <p>Добавляйте контрагентов и адреса. Адреса автоматически подставляются при выборе контрагента.</p>
+        
+        <input type="text" class="search-input" id="contractorSearch" placeholder="🔍 Поиск контрагента..." oninput="renderContractorsList()">
+        
+        <div id="contractorsList"></div>
+        
+        <div class="add-contractor-row">
+            <input type="text" id="newContractorName" placeholder="Название контрагента..." onkeydown="if(event.key==='Enter') addContractor()">
+            <input type="text" id="newContractorAddress" placeholder="Адрес..." onkeydown="if(event.key==='Enter') addContractor()">
+            <button class="btn btn-success" onclick="addContractor()">➕ Добавить контрагента</button>
+        </div>
+        
+        <div style="margin-top: 20px; display: flex; gap: 10px; justify-content: flex-end;">
+            <button class="btn btn-secondary" onclick="closeContractorsEditor()">Закрыть</button>
+            <button class="btn btn-primary" onclick="saveContractors()">💾 Сохранить контрагентов</button>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно: смена пароля -->
+<div id="changePasswordModal" class="modal">
+    <div class="modal-content" style="max-width: 450px;">
+        <div class="modal-header">
+            <h2>🔑 Смена пароля</h2>
+            <span class="close" onclick="closeChangePassword()">&times;</span>
+        </div>
+        <form id="changePasswordForm" onsubmit="changePassword(event)">
+            <p style="color: #5a6f8a; margin-bottom: 20px;">Пользователь: <strong id="cpUsername">{{ user }}</strong></p>
+            
+            <label style="display: block; font-weight: 600; color: #1e2f4e; margin-bottom: 6px;">Текущий пароль</label>
+            <input type="password" id="cpCurrentPassword" placeholder="Введите текущий пароль" required style="width:100%; padding:10px 14px; border-radius:8px; border:1px solid #ccd4e0; font-size:14px; margin-bottom:16px;">
+            
+            <label style="display: block; font-weight: 600; color: #1e2f4e; margin-bottom: 6px;">Новый пароль</label>
+            <input type="password" id="cpNewPassword" placeholder="Введите новый пароль" required minlength="4" style="width:100%; padding:10px 14px; border-radius:8px; border:1px solid #ccd4e0; font-size:14px; margin-bottom:16px;">
+            
+            <label style="display: block; font-weight: 600; color: #1e2f4e; margin-bottom: 6px;">Подтверждение пароля</label>
+            <input type="password" id="cpConfirmPassword" placeholder="Подтвердите новый пароль" required minlength="4" style="width:100%; padding:10px 14px; border-radius:8px; border:1px solid #ccd4e0; font-size:14px; margin-bottom:20px;">
+            
+            <div id="cpError" style="color: #dc3545; margin-bottom: 12px; display: none;"></div>
+            
+            <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                <button type="button" class="btn btn-secondary" onclick="closeChangePassword()">Отмена</button>
+                <button type="submit" class="btn btn-primary">💾 Сохранить пароль</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    let shipments = [];
+    let marks = [];
+    let contractors = {};
+    let marksBackup = [];
+    let contractorsBackup = [];
+    let currentUser = '{{ user }}';
+    let currentRole = '{{ role }}';
+    let isAdmin = currentRole === 'admin';
+    let isEditor = currentRole === 'editor' || currentRole === 'admin';
+    let isReadOnly = currentRole === 'user';
+
+    // ---------- ФОРМАТИРОВАНИЕ ДАТЫ ДЛЯ ОТОБРАЖЕНИЯ ----------
+    function formatDateDisplay(dateStr) {
+        if (!dateStr) return '';
+        const parts = dateStr.split('-');
+        if (parts.length === 3) {
+            return `${parts[2]}.${parts[1]}.${parts[0]}`;
+        }
+        return dateStr;
+    }
+
+    // ---------- ЗАПРЕТ ВЫБОРА ПРОШЛЫХ ДАТ ----------
+    function setDateRestrictions() {
+        const today = new Date().toISOString().split('T')[0];
+        const dateInputs = document.querySelectorAll('input[type="date"]');
+        dateInputs.forEach(input => {
+            if (!input.hasAttribute('readonly')) {
+                input.setAttribute('max', today);
+            }
+        });
+    }
+
+    // ---------- ЗАГРУЗКА ДАННЫХ ----------
+    async function loadData() {
+        try {
+            const [shipmentsRes, marksRes, contractorsRes] = await Promise.all([
+                fetch('/api/shipments'),
+                fetch('/api/marks'),
+                fetch('/api/contractors')
+            ]);
+            shipments = await shipmentsRes.json();
+            marks = await marksRes.json();
+            contractors = await contractorsRes.json();
+            renderTable();
+            updateSummary();
+            updateCounters();
+            setDateRestrictions();
+        } catch (error) {
+            showStatus('Ошибка загрузки данных', 'error');
+        }
+    }
+
+    // ---------- ОБНОВЛЕНИЕ СЧЁТЧИКОВ ----------
+    function updateCounters() {
+        document.getElementById('totalCount').textContent = shipments.length;
+        document.getElementById('rowCount').textContent = shipments.length;
+        updateContractorCount();
+    }
+
+    function updateContractorCount() {
+        document.getElementById('contractorCount').textContent = Object.keys(contractors).length;
+    }
+
+    // ---------- СОХРАНЕНИЕ ----------
+    async function saveAll() {
+        if (isReadOnly) {
+            showStatus('❌ У вас нет прав на редактирование', 'error');
+            return;
+        }
+        try {
+            const response = await fetch('/api/shipments', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(shipments)
+            });
+            const result = await response.json();
+            if (result.status === 'ok') {
+                showStatus('✅ Данные сохранены!', 'success');
+            } else {
+                showStatus('❌ ' + result.message, 'error');
+            }
+        } catch (error) {
+            showStatus('❌ Ошибка сервера', 'error');
+        }
+    }
+
+    function showStatus(msg, type) {
+        const el = document.getElementById('statusMsg');
+        el.textContent = msg;
+        el.className = type;
+        setTimeout(() => {
+            el.className = '';
+            if (el.textContent === msg) {
+                el.textContent = '✅ Готово к работе';
+            }
+        }, 3000);
+    }
+
+    // ---------- УМНОЕ ФОРМАТИРОВАНИЕ ВРЕМЕНИ ----------
+    function formatTimeInput(index, input) {
+        let cursorPos = input.selectionStart;
+        let digits = input.value.replace(/\D/g, '');
+        if (digits.length > 4) digits = digits.slice(0, 4);
+        
+        let formatted = digits;
+        if (digits.length === 4) {
+            formatted = digits.slice(0, 2) + ':' + digits.slice(2);
+        } else if (digits.length === 3) {
+            formatted = digits;
+        } else if (digits.length <= 2) {
+            formatted = digits;
+        }
+        
+        input.value = formatted;
+        let newPos = cursorPos;
+        if (formatted.length > digits.length) newPos = cursorPos + 1;
+        if (newPos > formatted.length) newPos = formatted.length;
+        input.setSelectionRange(newPos, newPos);
+        
+        if (index >= 0 && index < shipments.length) {
+            if (digits.length === 4) {
+                shipments[index].time = formatted;
+            } else {
+                shipments[index].time = digits;
+            }
+            updateSummary();
+            saveAll(); // Автосохранение при вводе времени
+        }
+    }
+
+    function saveTime(index, input) {
+        if (isReadOnly) return;
+        if (index >= 0 && index < shipments.length) {
+            let value = input.value.trim();
+            if (/^\d+$/.test(value) && value.length === 4) {
+                value = value.slice(0, 2) + ':' + value.slice(2);
+                input.value = value;
+            }
+            if (value && value.length >= 4) {
+                shipments[index].time = value;
+                updateSummary();
+                saveAll();
+            } else if (value === '') {
+                shipments[index].time = '';
+                updateSummary();
+                saveAll();
+            }
+        }
+    }
+
+    // ---------- РЕНДЕРИНГ ТАБЛИЦЫ ----------
+    function renderTable() {
+        const tbody = document.getElementById('tableBody');
+        const datalistId = 'marks-datalist';
+        let datalistHtml = `<datalist id="${datalistId}">`;
+        marks.forEach(m => datalistHtml += `<option value="${m}">`);
+        datalistHtml += `</datalist>`;
+
+        // СОРТИРОВКА: сначала по дате, потом по времени
+        let sortedShipments = [...shipments];
+        sortedShipments.sort((a, b) => {
+            if (a.date !== b.date) return a.date.localeCompare(b.date);
+            return (a.time || '00:00').localeCompare(b.time || '00:00');
+        });
+
+        if (sortedShipments.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="12" style="text-align:center; padding:30px; color:#6f7f95;">Нет записей.</td></tr>`;
+            document.getElementById('rowCount').textContent = '0';
+            updateCounters();
+            return;
+        }
+
+        let html = '';
+        sortedShipments.forEach((item, index) => {
+            const addresses = (item.contractor && contractors[item.contractor]) || [];
+            let addressOptions = '<option value="">-- Выберите --</option>';
+            addresses.forEach(a => {
+                addressOptions += `<option value="${a}" ${a === item.address ? 'selected' : ''}>${a}</option>`;
+            });
+            if (item.address && !addresses.includes(item.address)) {
+                addressOptions += `<option value="${item.address}" selected>${item.address}</option>`;
+            }
+
+            const displayDate = formatDateDisplay(item.date);
+            const canEdit = !isReadOnly;
+            const canDelete = isEditor;
+
+            // Цвет для отгрузки
+            const shippedColor = item.shipped === 'ДА' ? '#28a745' : '#dc3545';
+
+            html += `
+                <tr>
+                    <td>${index + 1}</td>
+                    <td>
+                        <input type="text" value="${displayDate}" 
+                               readonly
+                               class="date-display"
+                               style="width:100%; background: #f8f9fa; cursor: default; text-align: center; border: none; font-weight: 500;">
+                    </td>
+                    <td>
+                        <input type="text" value="${item.time || ''}" 
+                               oninput="formatTimeInput(${index}, this)" 
+                               onblur="saveTime(${index}, this)" 
+                               placeholder="ЧЧ:ММ или 1400" 
+                               style="width:100%; ${!canEdit ? 'background:#f8f9fa; cursor:not-allowed;' : ''}"
+                               ${!canEdit ? 'readonly' : ''}>
+                    </td>
+                    <td>
+                        <input type="text" list="contractors-datalist-${index}" 
+                               value="${item.contractor || ''}" 
+                               onchange="onContractorChange(${index}, this.value)"
+                               onblur="onContractorChange(${index}, this.value)"
+                               placeholder="Начните вводить..." autocomplete="off"
+                               style="width:100%; ${!canEdit ? 'background:#f8f9fa; cursor:not-allowed;' : ''}"
+                               ${!canEdit ? 'readonly' : ''}>
+                        <datalist id="contractors-datalist-${index}">
+                            ${Object.keys(contractors).map(c => `<option value="${c}">`).join('')}
+                        </datalist>
+                    </td>
+                    <td>
+                        <input type="text" list="addresses-datalist-${index}" 
+                               value="${item.address || ''}" 
+                               onchange="onAddressChange(${index}, this.value)"
+                               onblur="onAddressChange(${index}, this.value)"
+                               placeholder="Введите адрес..." autocomplete="off"
+                               style="width:100%; ${!canEdit ? 'background:#f8f9fa; cursor:not-allowed;' : ''}"
+                               ${!canEdit ? 'readonly' : ''}>
+                        <datalist id="addresses-datalist-${index}">
+                            ${addresses.map(a => `<option value="${a}">`).join('')}
+                        </datalist>
+                    </td>
+                    <td>
+                        <input type="text" list="${datalistId}" value="${item.mark || ''}" 
+                               oninput="updateField(${index}, 'mark', this.value)" 
+                               placeholder="Начните вводить..." autocomplete="off"
+                               style="${!canEdit ? 'background:#f8f9fa; cursor:not-allowed;' : ''}"
+                               ${!canEdit ? 'readonly' : ''}>
+                        ${datalistHtml}
+                    </td>
+                    <td>
+                        <input type="number" step="0.1" value="${item.volume || 0}" 
+                               onchange="updateField(${index}, 'volume', parseFloat(this.value) || 0)"
+                               style="${!canEdit ? 'background:#f8f9fa; cursor:not-allowed;' : ''}"
+                               ${!canEdit ? 'readonly' : ''}>
+                    </td>
+                    <td>
+                        <input type="text" value="${item.contact || ''}" 
+                               onchange="updateField(${index}, 'contact', this.value)"
+                               style="${!canEdit ? 'background:#f8f9fa; cursor:not-allowed;' : ''}"
+                               ${!canEdit ? 'readonly' : ''}>
+                    </td>
+                    <td>
+                        <input type="text" value="${item.phone || ''}" 
+                               onchange="updateField(${index}, 'phone', this.value)"
+                               style="${!canEdit ? 'background:#f8f9fa; cursor:not-allowed;' : ''}"
+                               ${!canEdit ? 'readonly' : ''}>
+                    </td>
+                    <td>
+                        <select onchange="updateField(${index}, 'shipped', this.value)" 
+                                style="width:70px; padding:4px; border-radius:4px; border:1px solid #d6deec; font-weight:700; color:${shippedColor};"
+                                ${!canEdit ? 'disabled style="background:#f8f9fa; cursor:not-allowed;"' : ''}>
+                            <option value="НЕТ" ${item.shipped === 'НЕТ' ? 'selected' : ''} style="color:#dc3545;">НЕТ</option>
+                            <option value="ДА" ${item.shipped === 'ДА' ? 'selected' : ''} style="color:#28a745;">ДА</option>
+                        </select>
+                    </td>
+                    <td>
+                        <select onchange="updateField(${index}, 'payment', this.value)" 
+                                style="width:100%; padding:4px; border-radius:4px; border:1px solid #d6deec;"
+                                ${!canEdit ? 'disabled style="background:#f8f9fa; cursor:not-allowed;"' : ''}>
+                            <option value="" ${!item.payment ? 'selected' : ''}>—</option>
+                            <option value="оплачено счёт" ${item.payment === 'оплачено счёт' ? 'selected' : ''}>💳 оплачено</option>
+                            <option value="постоплата счёт" ${item.payment === 'постоплата счёт' ? 'selected' : ''}>📄 постоплата</option>
+                            <option value="наличные" ${item.payment === 'наличные' ? 'selected' : ''}>💵 наличные</option>
+                            <option value="перевод" ${item.payment === 'перевод' ? 'selected' : ''}>💸 перевод</option>
+                        </select>
+                    </td>
+                    <td class="no-print">
+                        ${canDelete ? 
+                            `<button class="btn" style="background:#dc3545;color:white;border:none;padding:4px 12px;" onclick="deleteRow(${index})">✕</button>` :
+                            `<button class="btn btn-danger-disabled" style="background:#e9ecef;color:#6c757d;border:none;padding:4px 12px;cursor:not-allowed;" disabled>✕</button>`
+                        }
+                    </td>
+                </tr>
+            `;
+        });
+        tbody.innerHTML = html;
+        document.getElementById('rowCount').textContent = sortedShipments.length;
+        updateCounters();
+    }
+
+    // ---------- ОБРАБОТЧИКИ ----------
+    function onContractorChange(index, value) {
+        if (isReadOnly) return;
+        if (index >= 0 && index < shipments.length) {
+            if (value && !contractors[value]) {
+                contractors[value] = [];
+                updateContractorCount();
+                showStatus(`✅ Добавлен новый контрагент: ${value}`, 'success');
+                saveContractorsData();
+            }
+            shipments[index].contractor = value;
+            if (value) {
+                const addresses = contractors[value] || [];
+                if (addresses.length > 0 && !shipments[index].address) {
+                    shipments[index].address = addresses[0];
+                }
+            }
+            if (!shipments[index].date) {
+                shipments[index].date = document.getElementById('filterDate').value || new Date().toISOString().split('T')[0];
+            }
+            renderTable();
+            updateSummary();
+            saveAll();
+        }
+    }
+
+    function onAddressChange(index, value) {
+        if (isReadOnly) return;
+        if (index >= 0 && index < shipments.length) {
+            const contractor = shipments[index].contractor;
+            if (contractor && value && contractors[contractor] && !contractors[contractor].includes(value)) {
+                contractors[contractor].push(value);
+                updateContractorCount();
+                showStatus(`✅ Добавлен новый адрес для "${contractor}": ${value}`, 'success');
+                saveContractorsData();
+            }
+            shipments[index].address = value;
+            if (!shipments[index].date) {
+                shipments[index].date = document.getElementById('filterDate').value || new Date().toISOString().split('T')[0];
+            }
+            updateSummary();
+            saveAll();
+        }
+    }
+
+    async function saveContractorsData() {
+        try {
+            await fetch('/api/contractors', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(contractors)
+            });
+        } catch(e) {
+            console.error('Ошибка сохранения контрагентов:', e);
+        }
+    }
+
+    function updateField(index, field, value) {
+        if (isReadOnly) return;
+        if (index >= 0 && index < shipments.length) {
+            shipments[index][field] = value;
+            if (!shipments[index].date) {
+                shipments[index].date = document.getElementById('filterDate').value || new Date().toISOString().split('T')[0];
+            }
+            updateSummary();
+            // АВТОСОХРАНЕНИЕ при изменении любого поля
+            saveAll();
+        }
+    }
+
+    // ---------- ДОБАВЛЕНИЕ СТРОКИ ----------
+    function addRow() {
+        if (isReadOnly) {
+            showStatus('❌ У вас нет прав на добавление записей', 'error');
+            return;
+        }
+        const today = new Date().toISOString().split('T')[0];
+        const date = document.getElementById('filterDate').value || today;
+        
+        if (date < today) {
+            showStatus('❌ Нельзя добавлять записи за предыдущие дни!', 'error');
+            return;
+        }
+        
+        shipments.push({
+            date: date,
+            time: '',
+            contractor: '',
+            address: '',
+            mark: '',
+            volume: 0,
+            contact: '',
+            phone: '',
+            shipped: 'НЕТ',
+            payment: ''
+        });
+        renderTable();
+        updateSummary();
+        saveAll();
+        const tbody = document.getElementById('tableBody');
+        if (tbody.lastElementChild) {
+            setTimeout(() => {
+                tbody.lastElementChild.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                const inputs = tbody.lastElementChild.querySelectorAll('input');
+                if (inputs.length > 0) {
+                    inputs[0].focus();
+                }
+            }, 100);
+        }
+    }
+
+    // ---------- УДАЛЕНИЕ ----------
+    function deleteRow(index) {
+        if (!isEditor) {
+            showStatus('❌ У вас нет прав на удаление записей', 'error');
+            return;
+        }
+        if (confirm('Удалить эту запись?')) {
+            fetch(`/api/shipments/delete/${index}`, {
+                method: 'DELETE'
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (result.status === 'ok') {
+                    shipments.splice(index, 1);
+                    renderTable();
+                    updateSummary();
+                    saveAll();
+                    showStatus('✅ Запись удалена', 'success');
+                } else {
+                    showStatus('❌ ' + result.message, 'error');
+                }
+            })
+            .catch(error => {
+                showStatus('❌ Ошибка сервера', 'error');
+            });
+        }
+    }
+
+    function clearAll() {
+        if (!isEditor) {
+            showStatus('❌ У вас нет прав на удаление записей', 'error');
+            return;
+        }
+        if (confirm('Удалить ВСЕ записи?')) {
+            let deleted = 0;
+            shipments.forEach((item, index) => {
+                fetch(`/api/shipments/delete/${index - deleted}`, {
+                    method: 'DELETE'
+                })
+                .then(response => response.json())
+                .then(result => {
+                    if (result.status === 'ok') {
+                        deleted++;
+                        if (deleted === shipments.length) {
+                            shipments = [];
+                            renderTable();
+                            updateSummary();
+                            saveAll();
+                            showStatus('✅ Все записи удалены', 'success');
+                        }
+                    }
+                });
+            });
+        }
+    }
+
+    // ---------- СВОДКА ----------
+    function updateSummary() {
+        const filterDate = document.getElementById('filterDate').value;
+        const filtered = shipments.filter(item => item.date === filterDate);
+        
+        document.getElementById('dayCount').textContent = filtered.length;
+        
+        let dayTotal = 0;
+        filtered.forEach(item => {
+            dayTotal += parseFloat(item.volume) || 0;
+        });
+        document.getElementById('quickTotalVolume').textContent = dayTotal.toFixed(1);
+        
+        const summary = {};
+        filtered.forEach(item => {
+            const mark = item.mark || 'Без марки';
+            const vol = parseFloat(item.volume) || 0;
+            summary[mark] = (summary[mark] || 0) + vol;
+        });
+
+        const grid = document.getElementById('summaryGrid');
+        const keys = Object.keys(summary);
+        
+        if (keys.length === 0) {
+            const displayDate = formatDateDisplay(filterDate);
+            grid.innerHTML = `<div style="color:#5a6f8a; padding:8px 0;">Нет данных за ${displayDate || 'выбранную дату'}</div>`;
+            return;
+        }
+
+        let html = '';
+        let total = 0;
+        keys.forEach(mark => {
+            const vol = summary[mark];
+            total += vol;
+            html += `
+                <div class="summary-item">
+                    <div class="label">${mark}</div>
+                    <div class="value">${vol.toFixed(1)}</div>
+                </div>
+            `;
+        });
+        html += `
+            <div class="summary-item" style="border-left:3px solid #1a2b4a; background:#e3eaf5;">
+                <div class="label">🔹 ИТОГО за день</div>
+                <div class="value">${total.toFixed(1)}</div>
+            </div>
+        `;
+        grid.innerHTML = html;
+    }
+
+    // ---------- ПЕЧАТЬ ----------
+    function printReport() {
+        window.print();
+    }
+
+    // ---------- ПРОСМОТР ОТЧЁТА ОНЛАЙН ----------
+    function viewPeriodReport() {
+        const startDate = document.getElementById('periodStart').value;
+        const endDate = document.getElementById('periodEnd').value;
+        
+        if (!startDate || !endDate) {
+            showStatus('❌ Выберите даты начала и конца периода', 'error');
+            return;
+        }
+        
+        if (startDate > endDate) {
+            showStatus('❌ Дата начала не может быть позже даты конца', 'error');
+            return;
+        }
+        
+        const filtered = shipments.filter(item => {
+            return item.date >= startDate && item.date <= endDate;
+        });
+        
+        if (filtered.length === 0) {
+            showStatus('❌ Нет данных за выбранный период', 'error');
+            return;
+        }
+        
+        filtered.sort((a, b) => {
+            if (a.date !== b.date) return a.date.localeCompare(b.date);
+            return (a.time || '00:00').localeCompare(b.time || '00:00');
+        });
+        
+        const summary = {};
+        filtered.forEach(item => {
+            const mark = item.mark || 'Без марки';
+            const vol = parseFloat(item.volume) || 0;
+            summary[mark] = (summary[mark] || 0) + vol;
+        });
+        
+        const viewWindow = window.open('', '_blank', 'width=1100,height=800');
+        if (!viewWindow) {
+            showStatus('❌ Разрешите всплывающие окна для просмотра', 'error');
+            return;
+        }
+        
+        let rowsHtml = '';
+        filtered.forEach((item, idx) => {
+            rowsHtml += `
+                <tr>
+                    <td>${idx + 1}</td>
+                    <td>${formatDateDisplay(item.date)}</td>
+                    <td>${item.time || ''}</td>
+                    <td>${item.contractor || ''}</td>
+                    <td>${item.address || ''}</td>
+                    <td>${item.mark || ''}</td>
+                    <td>${item.volume || 0}</td>
+                    <td>${item.contact || ''}</td>
+                    <td>${item.phone || ''}</td>
+                    <td>${item.shipped || 'НЕТ'}</td>
+                    <td>${item.payment || ''}</td>
+                </tr>
+            `;
+        });
+        
+        let summaryHtml = '';
+        let total = 0;
+        const sortedMarks = Object.keys(summary).sort();
+        sortedMarks.forEach(mark => {
+            const vol = summary[mark];
+            total += vol;
+            summaryHtml += `<div style="display:inline-block; margin-right:30px; font-size:14px;"><strong>${mark}:</strong> ${vol.toFixed(1)} м³</div>`;
+        });
+        summaryHtml += `<div style="display:inline-block; font-weight:700; border-left:2px solid #000; padding-left:20px; font-size:14px;">ИТОГО: ${total.toFixed(1)} м³</div>`;
+        
+        const now = new Date();
+        const dateStr = now.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        const timeStr = now.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        
+        const html = `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Отчёт за период</title>
+    <style>
+        * { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { padding: 30px; }
+        h1 { text-align: center; color: #1a2b4a; margin-bottom: 5px; }
+        .subtitle { text-align: center; color: #5a6f8a; margin-top: 0; font-size: 16px; }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 20px; }
+        th { background: #e7ebf4; color: #1a2b4a; padding: 10px 6px; text-align: left; border: 1px solid #c8d1e0; }
+        td { padding: 8px 6px; border: 1px solid #c8d1e0; }
+        .summary { margin-top: 25px; padding: 20px; background: #f0f4fe; border-radius: 8px; border-left: 5px solid #1a2b4a; }
+        .summary h3 { margin-top: 0; color: #1a2b4a; }
+        .footer { text-align: center; color: #8a9bae; margin-top: 30px; font-size: 12px; border-top: 1px solid #ddd; padding-top: 15px; }
+        .btn-close { padding: 10px 30px; background: #1a2b4a; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; margin-top: 20px; }
+        .btn-close:hover { background: #2c4270; }
+        .no-print { display: block; }
+        @media print { .no-print { display: none !important; } body { padding: 20px; } }
+    </style>
+</head>
+<body>
+    <div class="no-print" style="display: flex; justify-content: flex-end; gap: 10px; margin-bottom: 15px;">
+        <button class="btn-close" onclick="window.print()">🖨️ Печать</button>
+        <button class="btn-close" onclick="window.close()">✖ Закрыть</button>
+    </div>
+    <h1>📋 РЕЕСТР ОТГРУЗОК</h1>
+    <p class="subtitle">Период: с <strong>${formatDateDisplay(startDate)}</strong> по <strong>${formatDateDisplay(endDate)}</strong> &nbsp;|&nbsp; Всего отгрузок: <strong>${filtered.length}</strong></p>
+    
+    <table>
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Дата</th>
+                <th>Время</th>
+                <th>Контрагент</th>
+                <th>Адрес</th>
+                <th>Марка</th>
+                <th>Объём (м³)</th>
+                <th>Контакт</th>
+                <th>Телефон</th>
+                <th>Отгружено</th>
+                <th>Оплата</th>
+            </tr>
+        </thead>
+        <tbody>
+            ${rowsHtml}
+        </tbody>
+    </table>
+    
+    <div class="summary">
+        <h3>📊 Сводка по маркам</h3>
+        <div style="display:flex; flex-wrap:wrap; gap:10px;">${summaryHtml}</div>
+    </div>
+    
+    <div class="footer">
+        Отчёт сгенерирован ${dateStr} ${timeStr}
+    </div>
+</body>
+</html>
+        `;
+        
+        viewWindow.document.write(html);
+        viewWindow.document.close();
+    }
+
+    // ---------- ПЕЧАТЬ ОТЧЁТА ЗА ПЕРИОД ----------
+    function printPeriodReport() {
+        const startDate = document.getElementById('periodStart').value;
+        const endDate = document.getElementById('periodEnd').value;
+        
+        if (!startDate || !endDate) {
+            showStatus('❌ Выберите даты начала и конца периода', 'error');
+            return;
+        }
+        
+        if (startDate > endDate) {
+            showStatus('❌ Дата начала не может быть позже даты конца', 'error');
+            return;
+        }
+        
+        const filtered = shipments.filter(item => {
+            return item.date >= startDate && item.date <= endDate;
+        });
+        
+        if (filtered.length === 0) {
+            showStatus('❌ Нет данных за выбранный период', 'error');
+            return;
+        }
+        
+        filtered.sort((a, b) => {
+            if (a.date !== b.date) return a.date.localeCompare(b.date);
+            return (a.time || '00:00').localeCompare(b.time || '00:00');
+        });
+        
+        const summary = {};
+        filtered.forEach(item => {
+            const mark = item.mark || 'Без марки';
+            const vol = parseFloat(item.volume) || 0;
+            summary[mark] = (summary[mark] || 0) + vol;
+        });
+        
+        const printWindow = window.open('', '_blank', 'width=1100,height=800');
+        if (!printWindow) {
+            showStatus('❌ Разрешите всплывающие окна для печати', 'error');
+            return;
+        }
+        
+        let rowsHtml = '';
+        filtered.forEach((item, idx) => {
+            rowsHtml += `
+                <tr>
+                    <td>${idx + 1}</td>
+                    <td>${formatDateDisplay(item.date)}</td>
+                    <td>${item.time || ''}</td>
+                    <td>${item.contractor || ''}</td>
+                    <td>${item.address || ''}</td>
+                    <td>${item.mark || ''}</td>
+                    <td>${item.volume || 0}</td>
+                    <td>${item.contact || ''}</td>
+                    <td>${item.phone || ''}</td>
+                    <td>${item.shipped || 'НЕТ'}</td>
+                    <td>${item.payment || ''}</td>
+                </tr>
+            `;
+        });
+        
+        let summaryHtml = '';
+        let total = 0;
+        const sortedMarks = Object.keys(summary).sort();
+        sortedMarks.forEach(mark => {
+            const vol = summary[mark];
+            total += vol;
+            summaryHtml += `<div style="display:inline-block; margin-right:30px; font-size:14px;"><strong>${mark}:</strong> ${vol.toFixed(1)} м³</div>`;
+        });
+        summaryHtml += `<div style="display:inline-block; font-weight:700; border-left:2px solid #000; padding-left:20px; font-size:14px;">ИТОГО: ${total.toFixed(1)} м³</div>`;
+        
+        const now = new Date();
+        const dateStr = now.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        const timeStr = now.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        
+        const html = `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Отчёт за период</title>
+    <style>
+        * { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { padding: 30px; }
+        h1 { text-align: center; color: #1a2b4a; margin-bottom: 5px; }
+        .subtitle { text-align: center; color: #5a6f8a; margin-top: 0; font-size: 16px; }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 20px; }
+        th { background: #e7ebf4; color: #1a2b4a; padding: 10px 6px; text-align: left; border: 1px solid #c8d1e0; }
+        td { padding: 8px 6px; border: 1px solid #c8d1e0; }
+        .summary { margin-top: 25px; padding: 20px; background: #f0f4fe; border-radius: 8px; border-left: 5px solid #1a2b4a; }
+        .summary h3 { margin-top: 0; color: #1a2b4a; }
+        .footer { text-align: center; color: #8a9bae; margin-top: 30px; font-size: 12px; border-top: 1px solid #ddd; padding-top: 15px; }
+        @media print { body { padding: 20px; } }
+    </style>
+</head>
+<body>
+    <h1>📋 РЕЕСТР ОТГРУЗОК</h1>
+    <p class="subtitle">Период: с <strong>${formatDateDisplay(startDate)}</strong> по <strong>${formatDateDisplay(endDate)}</strong> &nbsp;|&nbsp; Всего отгрузок: <strong>${filtered.length}</strong></p>
+    
+    <table>
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Дата</th>
+                <th>Время</th>
+                <th>Контрагент</th>
+                <th>Адрес</th>
+                <th>Марка</th>
+                <th>Объём (м³)</th>
+                <th>Контакт</th>
+                <th>Телефон</th>
+                <th>Отгружено</th>
+                <th>Оплата</th>
+            </tr>
+        </thead>
+        <tbody>
+            ${rowsHtml}
+        </tbody>
+    </table>
+    
+    <div class="summary">
+        <h3>📊 Сводка по маркам</h3>
+        <div style="display:flex; flex-wrap:wrap; gap:10px;">${summaryHtml}</div>
+    </div>
+    
+    <div class="footer">
+        Отчёт сгенерирован ${dateStr} ${timeStr}
+    </div>
+    
+    <script>
+        window.onload = function() {
+            window.print();
+        }
+    <\/script>
+</body>
+</html>
+        `;
+        
+        printWindow.document.write(html);
+        printWindow.document.close();
+    }
+
+    // ---------- РЕДАКТОР МАРОК ----------
+    function openMarksEditor() {
+        if (isReadOnly) {
+            showStatus('❌ У вас нет прав на редактирование марок', 'error');
+            return;
+        }
+        marksBackup = [...marks];
+        renderMarksList();
+        document.getElementById('marksModal').style.display = 'block';
+        document.getElementById('markSearch').value = '';
+        document.getElementById('newMarkInput').value = '';
+    }
+
+    function closeMarksEditor() {
+        document.getElementById('marksModal').style.display = 'none';
+        marks = [...marksBackup];
+        renderTable();
+    }
+
+    function renderMarksList() {
+        const container = document.getElementById('marksList');
+        const search = document.getElementById('markSearch').value.toLowerCase();
+        const filtered = marks.filter(m => m.toLowerCase().includes(search));
+        container.innerHTML = filtered.length === 0 
+            ? '<div style="color:#6f7f95; padding:20px; text-align:center;">Марок не найдено</div>'
+            : filtered.map((m, i) => {
+                const realIndex = marks.indexOf(m);
+                return `<div class="contractor-card">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <span>${m}</span>
+                        <button class="btn" style="background:#dc3545;color:white;border:none;" onclick="deleteMark(${realIndex})">✕</button>
+                    </div>
+                </div>`;
+              }).join('');
+    }
+
+    function filterMarksList() { renderMarksList(); }
+
+    function addNewMark() {
+        const input = document.getElementById('newMarkInput');
+        const mark = input.value.trim();
+        if (mark && !marks.includes(mark)) {
+            marks.push(mark);
+            renderMarksList();
+            input.value = '';
+            showStatus('✅ Марка добавлена', 'success');
+        } else if (marks.includes(mark)) {
+            showStatus('❌ Такая марка уже есть', 'error');
+        }
+    }
+
+    function deleteMark(index) {
+        if (index >= 0 && index < marks.length && confirm(`Удалить марку "${marks[index]}"?`)) {
+            marks.splice(index, 1);
+            renderMarksList();
+            showStatus('✅ Марка удалена', 'success');
+        }
+    }
+
+    async function saveMarks() {
+        try {
+            await fetch('/api/marks', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(marks)
+            });
+            marksBackup = [...marks];
+            showStatus('✅ Марки сохранены!', 'success');
+        } catch(e) {
+            showStatus('❌ Ошибка сохранения', 'error');
+        }
+    }
+
+    // ---------- РЕДАКТОР КОНТРАГЕНТОВ ----------
+    function openContractorsEditor() {
+        if (isReadOnly) {
+            showStatus('❌ У вас нет прав на редактирование контрагентов', 'error');
+            return;
+        }
+        contractorsBackup = JSON.parse(JSON.stringify(contractors));
+        renderContractorsList();
+        document.getElementById('contractorsModal').style.display = 'block';
+        document.getElementById('contractorSearch').value = '';
+        document.getElementById('newContractorName').value = '';
+        document.getElementById('newContractorAddress').value = '';
+    }
+
+    function closeContractorsEditor() {
+        document.getElementById('contractorsModal').style.display = 'none';
+        contractors = JSON.parse(JSON.stringify(contractorsBackup));
+        renderTable();
+        updateContractorCount();
+    }
+
+    function renderContractorsList() {
+        const container = document.getElementById('contractorsList');
+        const search = document.getElementById('contractorSearch').value.toLowerCase();
+        const filtered = Object.keys(contractors).filter(c => c.toLowerCase().includes(search));
+        
+        if (filtered.length === 0) {
+            container.innerHTML = '<div style="color:#6f7f95; padding:20px; text-align:center;">Контрагентов не найдено</div>';
+            return;
+        }
+        
+        let html = '';
+        filtered.forEach(name => {
+            const addresses = contractors[name] || [];
+            html += `
+                <div class="contractor-card">
+                    <div class="contractor-name">${name}</div>
+                    <div>Адреса (${addresses.length}):</div>
+                    <ul class="address-list">
+                        ${addresses.map((addr, ai) => `
+                            <li>
+                                ${addr}
+                                <button class="btn" style="background:#dc3545;color:white;border:none;padding:2px 8px;font-size:11px;margin-left:8px;" 
+                                        onclick="deleteAddress('${name}', ${ai})">✕</button>
+                            </li>
+                        `).join('')}
+                    </ul>
+                    <div class="address-actions">
+                        <input type="text" placeholder="Новый адрес..." 
+                               id="newAddrInput_${name.replace(/\s/g, '_')}" 
+                               style="flex:1; padding:4px 8px; border-radius:4px; border:1px solid #d6deec; font-size:13px;">
+                        <button class="btn btn-success" onclick="addAddress('${name}')">➕ Адрес</button>
+                        <button class="btn btn-danger" onclick="deleteContractor('${name}')">🗑️ Удалить контрагента</button>
+                    </div>
+                </div>
+            `;
+        });
+        container.innerHTML = html;
+    }
+
+    function addAddress(contractorName) {
+        const inputId = `newAddrInput_${contractorName.replace(/\s/g, '_')}`;
+        const input = document.getElementById(inputId);
+        const address = input.value.trim();
+        if (address && contractors[contractorName] && !contractors[contractorName].includes(address)) {
+            contractors[contractorName].push(address);
+            renderContractorsList();
+            showStatus('✅ Адрес добавлен', 'success');
+        } else if (contractors[contractorName] && contractors[contractorName].includes(address)) {
+            showStatus('❌ Такой адрес уже есть', 'error');
+        }
+    }
+
+    function deleteAddress(contractorName, index) {
+        if (index >= 0 && contractors[contractorName]) {
+            const addr = contractors[contractorName][index];
+            if (confirm(`Удалить адрес "${addr}" у "${contractorName}"?`)) {
+                contractors[contractorName].splice(index, 1);
+                renderContractorsList();
+                showStatus('✅ Адрес удалён', 'success');
+            }
+        }
+    }
+
+    function deleteContractor(name) {
+        if (confirm(`Удалить контрагента "${name}" и все его адреса?`)) {
+            delete contractors[name];
+            renderContractorsList();
+            updateContractorCount();
+            showStatus(`✅ Контрагент "${name}" удалён`, 'success');
+        }
+    }
+
+    function addContractor() {
+        const nameInput = document.getElementById('newContractorName');
+        const addrInput = document.getElementById('newContractorAddress');
+        const name = nameInput.value.trim();
+        const address = addrInput.value.trim();
+        
+        if (!name) {
+            showStatus('❌ Введите название контрагента', 'error');
+            return;
+        }
+        if (!contractors[name]) {
+            contractors[name] = [];
+        }
+        if (address && !contractors[name].includes(address)) {
+            contractors[name].push(address);
+        }
+        nameInput.value = '';
+        addrInput.value = '';
+        renderContractorsList();
+        updateContractorCount();
+        showStatus(`✅ Контрагент "${name}" добавлен`, 'success');
+    }
+
+    async function saveContractors() {
+        try {
+            await fetch('/api/contractors', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(contractors)
+            });
+            contractorsBackup = JSON.parse(JSON.stringify(contractors));
+            showStatus('✅ Контрагенты сохранены!', 'success');
+            renderTable();
+        } catch(e) {
+            showStatus('❌ Ошибка сохранения', 'error');
+        }
+    }
+
+    // ---------- СМЕНА ПАРОЛЯ ----------
+    function openChangePassword() {
+        document.getElementById('changePasswordModal').style.display = 'block';
+        document.getElementById('cpCurrentPassword').value = '';
+        document.getElementById('cpNewPassword').value = '';
+        document.getElementById('cpConfirmPassword').value = '';
+        document.getElementById('cpError').style.display = 'none';
+        document.getElementById('cpError').textContent = '';
+    }
+
+    function closeChangePassword() {
+        document.getElementById('changePasswordModal').style.display = 'none';
+    }
+
+    async function changePassword(event) {
+        event.preventDefault();
+        
+        const currentPassword = document.getElementById('cpCurrentPassword').value;
+        const newPassword = document.getElementById('cpNewPassword').value;
+        const confirmPassword = document.getElementById('cpConfirmPassword').value;
+        const errorEl = document.getElementById('cpError');
+        
+        if (newPassword !== confirmPassword) {
+            errorEl.textContent = '❌ Новый пароль и подтверждение не совпадают';
+            errorEl.style.display = 'block';
+            return;
+        }
+        
+        if (newPassword.length < 4) {
+            errorEl.textContent = '❌ Пароль должен содержать минимум 4 символа';
+            errorEl.style.display = 'block';
+            return;
+        }
+        
+        try {
+            const response = await fetch('/api/change-password', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    username: '{{ user }}',
+                    current_password: currentPassword,
+                    new_password: newPassword
+                })
+            });
+            const result = await response.json();
+            if (result.status === 'ok') {
+                showStatus('✅ Пароль успешно изменён!', 'success');
+                closeChangePassword();
+            } else {
+                errorEl.textContent = '❌ ' + result.message;
+                errorEl.style.display = 'block';
+            }
+        } catch (error) {
+            errorEl.textContent = '❌ Ошибка сервера';
+            errorEl.style.display = 'block';
+        }
+    }
+
+    // ---------- ЗАКРЫТИЕ МОДАЛЬНЫХ ОКОН ----------
+    window.onclick = function(event) {
+        const marksModal = document.getElementById('marksModal');
+        const contractorsModal = document.getElementById('contractorsModal');
+        const changePasswordModal = document.getElementById('changePasswordModal');
+        if (event.target === marksModal) closeMarksEditor();
+        if (event.target === contractorsModal) closeContractorsEditor();
+        if (event.target === changePasswordModal) closeChangePassword();
+    };
+
+    // ---------- СОБЫТИЯ ----------
+    document.getElementById('filterDate').addEventListener('change', function() {
+        updateSummary();
+    });
+
+    // Устанавливаем даты по умолчанию
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('filterDate').value = today;
+    
+    const startOfWeek = new Date();
+    startOfWeek.setDate(startOfWeek.getDate() - 6);
+    document.getElementById('periodStart').value = startOfWeek.toISOString().split('T')[0];
+    document.getElementById('periodEnd').value = today;
+
+    // ---------- ОБНОВЛЕНИЕ ДАТЫ И ВРЕМЕНИ ----------
+    function updateDateTime() {
+        const now = new Date();
+        const dateStr = now.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        const timeStr = now.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        document.getElementById('currentDateDisplay').textContent = dateStr;
+        document.getElementById('currentTimeDisplay').textContent = timeStr;
+    }
+    setInterval(updateDateTime, 1000);
+    updateDateTime();
+
+    loadData();
+</script>
+</body>
+</html>
